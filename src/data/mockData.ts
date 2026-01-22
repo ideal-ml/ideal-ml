@@ -1,4 +1,4 @@
-import { Model, User } from "../types";
+import { Model, User, TrainingPipeline, TrainingRun } from "../types";
 
 export const currentUser: User = {
   id: "user-1",
@@ -275,4 +275,313 @@ export const initialModels: Model[] = [
       },
     ],
   },
+  {
+    id: "model-7",
+    name: "Example Classification Model",
+    version: "1.0.0",
+    description: "A simple classification model demonstrating dataset preview functionality.",
+    framework: "scikit-learn",
+    status: "development",
+    owner: "Sarah Chen",
+    createdAt: "2025-01-21T10:00:00Z",
+    updatedAt: "2025-01-21T10:00:00Z",
+    metrics: {
+      accuracy: 0.85,
+      latency: 12,
+    },
+    files: {
+      modelCard: "models/example/ModelCard.md",
+      trainingScript: "models/example/train.py",
+      featureScript: "models/example/features.py",
+      inferenceScript: "models/example/inference.py",
+    },
+    mockContent: {
+      modelCard: `# Example Classification Model
+
+## Overview
+A simple classification model that predicts labels based on three input features.
+
+## Intended Use
+This model is designed for demonstration purposes to showcase the ML platform's dataset preview functionality.
+
+## Training Data
+The model was trained on a dataset with 10,000 samples containing:
+- Feature 1: Integer values (1-3)
+- Feature 2: Integer values (6-8)
+- Feature 3: Float values (0.1-0.9)
+- Label: Binary classification (0 or 1)
+
+## Performance
+- Accuracy: 85%
+- Latency: 12ms
+`,
+      trainingScript: `import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+import joblib
+
+def load_data(path: str) -> pd.DataFrame:
+    """Load the training dataset from CSV."""
+    return pd.read_csv(path)
+
+def preprocess(df: pd.DataFrame) -> tuple:
+    """Split features and labels."""
+    X = df[["Feature 1", "Feature 2", "Feature 3"]]
+    y = df["Label"]
+    return X, y
+
+def train_model(X, y):
+    """Train a Random Forest classifier."""
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    model = RandomForestClassifier(
+        n_estimators=100,
+        max_depth=10,
+        random_state=42
+    )
+    model.fit(X_train, y_train)
+
+    # Evaluate
+    predictions = model.predict(X_test)
+    accuracy = accuracy_score(y_test, predictions)
+    print(f"Model accuracy: {accuracy:.2%}")
+
+    return model
+
+def main():
+    df = load_data("src/data/example_dataset.csv")
+    X, y = preprocess(df)
+    model = train_model(X, y)
+    joblib.dump(model, "model.pkl")
+    print("Model saved to model.pkl")
+
+if __name__ == "__main__":
+    main()
+`,
+      featureScript: `import pandas as pd
+import numpy as np
+from typing import Dict, List
+
+def extract_features(raw_data: Dict) -> np.ndarray:
+    """
+    Extract and normalize features from raw input data.
+
+    Args:
+        raw_data: Dictionary containing Feature 1, Feature 2, Feature 3
+
+    Returns:
+        Numpy array of processed features
+    """
+    features = np.array([
+        raw_data["Feature 1"],
+        raw_data["Feature 2"],
+        raw_data["Feature 3"]
+    ])
+
+    # Normalize features
+    normalized = normalize_features(features)
+    return normalized
+
+def normalize_features(features: np.ndarray) -> np.ndarray:
+    """Apply min-max normalization."""
+    min_vals = np.array([1, 6, 0.1])
+    max_vals = np.array([3, 8, 0.9])
+
+    normalized = (features - min_vals) / (max_vals - min_vals)
+    return normalized
+
+def batch_extract(data: List[Dict]) -> np.ndarray:
+    """Extract features for a batch of samples."""
+    return np.array([extract_features(d) for d in data])
+`,
+      inferenceScript: `import joblib
+import numpy as np
+from typing import Dict, List
+from features import extract_features, batch_extract
+
+class ExampleClassifier:
+    """Inference wrapper for the Example Classification Model."""
+
+    def __init__(self, model_path: str = "model.pkl"):
+        self.model = joblib.load(model_path)
+
+    def predict(self, raw_data: Dict) -> int:
+        """
+        Make a single prediction.
+
+        Args:
+            raw_data: Dictionary with Feature 1, Feature 2, Feature 3
+
+        Returns:
+            Predicted label (0 or 1)
+        """
+        features = extract_features(raw_data)
+        prediction = self.model.predict([features])[0]
+        return int(prediction)
+
+    def predict_batch(self, data: List[Dict]) -> List[int]:
+        """Make predictions for a batch of samples."""
+        features = batch_extract(data)
+        predictions = self.model.predict(features)
+        return [int(p) for p in predictions]
+
+    def predict_proba(self, raw_data: Dict) -> Dict[str, float]:
+        """Get prediction probabilities."""
+        features = extract_features(raw_data)
+        proba = self.model.predict_proba([features])[0]
+        return {"class_0": proba[0], "class_1": proba[1]}
+
+# Example usage
+if __name__ == "__main__":
+    classifier = ExampleClassifier()
+
+    sample = {"Feature 1": 2, "Feature 2": 7, "Feature 3": 0.5}
+    result = classifier.predict(sample)
+    print(f"Prediction: {result}")
+
+    proba = classifier.predict_proba(sample)
+    print(f"Probabilities: {proba}")
+`,
+    },
+    versions: [
+      {
+        version: "1.0.0",
+        datasets: [
+          {
+            id: "ds-example",
+            name: "example_dataset.csv",
+            filePath: "src/data/example_dataset.csv",
+            description: "Example training dataset with features and labels",
+            rowCount: 10000,
+            columns: ["Feature 1", "Feature 2", "Feature 3", "Label"],
+            addedAt: "2025-01-21T10:00:00Z",
+            previewData: {
+              headers: ["Feature 1", "Feature 2", "Feature 3", "Label"],
+              rows: [
+                ["1", "6", "0.3", "1"],
+                ["1", "6", "0.6", "1"],
+                ["2", "7", "0.8", "0"],
+                ["3", "8", "0.9", "0"],
+                ["2", "7", "0.2", "0"],
+                ["1", "7", "0.1", "1"],
+                ["2", "7", "0.2", "1"],
+              ],
+            },
+          },
+        ],
+        createdAt: "2025-01-21T10:00:00Z",
+        notes: "Initial version with example dataset",
+      },
+    ],
+  },
 ];
+
+// Mock Training Runs
+const mockTrainingRuns: TrainingRun[] = [
+  {
+    id: "run-001",
+    modelId: "model-7",
+    datasetId: "ds-example",
+    datasetName: "example_dataset.csv",
+    status: "completed",
+    startedAt: "2025-01-20T14:30:00Z",
+    completedAt: "2025-01-20T14:32:45Z",
+    metrics: {
+      accuracy: 0.87,
+      precision: 0.85,
+      recall: 0.89,
+      f1Score: 0.87,
+      trainingTime: 165,
+      epochs: 100,
+    },
+    outputModelPath: "models/example/outputs/model_run001.pkl",
+    logs: [
+      "[2025-01-20 14:30:00] Starting training run...",
+      "[2025-01-20 14:30:01] Loading dataset: example_dataset.csv",
+      "[2025-01-20 14:30:02] Dataset loaded: 10000 rows, 4 columns",
+      "[2025-01-20 14:30:03] Preprocessing data...",
+      "[2025-01-20 14:30:05] Training RandomForestClassifier...",
+      "[2025-01-20 14:32:40] Training complete. Evaluating...",
+      "[2025-01-20 14:32:43] Accuracy: 87.0%",
+      "[2025-01-20 14:32:44] Saving model to models/example/outputs/model_run001.pkl",
+      "[2025-01-20 14:32:45] Training run completed successfully.",
+    ],
+    validation: {
+      isValid: true,
+      datasetColumns: ["Feature 1", "Feature 2", "Feature 3", "Label"],
+      expectedColumns: ["Feature 1", "Feature 2", "Feature 3", "Label"],
+      missingColumns: [],
+      extraColumns: [],
+      message: "All 4 required columns found in dataset",
+    },
+    triggeredBy: "Sarah Chen",
+  },
+  {
+    id: "run-002",
+    modelId: "model-7",
+    datasetId: "ds-example",
+    datasetName: "example_dataset.csv",
+    status: "completed",
+    startedAt: "2025-01-19T10:15:00Z",
+    completedAt: "2025-01-19T10:18:30Z",
+    metrics: {
+      accuracy: 0.82,
+      precision: 0.80,
+      recall: 0.84,
+      f1Score: 0.82,
+      trainingTime: 210,
+      epochs: 50,
+    },
+    outputModelPath: "models/example/outputs/model_run002.pkl",
+    logs: [
+      "[2025-01-19 10:15:00] Starting training run...",
+      "[2025-01-19 10:15:01] Loading dataset: example_dataset.csv",
+      "[2025-01-19 10:15:02] Dataset loaded: 10000 rows, 4 columns",
+      "[2025-01-19 10:18:28] Training complete. Accuracy: 82.0%",
+      "[2025-01-19 10:18:30] Training run completed successfully.",
+    ],
+    validation: {
+      isValid: true,
+      datasetColumns: ["Feature 1", "Feature 2", "Feature 3", "Label"],
+      expectedColumns: ["Feature 1", "Feature 2", "Feature 3", "Label"],
+      missingColumns: [],
+      extraColumns: [],
+      message: "All 4 required columns found in dataset",
+    },
+    triggeredBy: "Sarah Chen",
+  },
+  {
+    id: "run-003",
+    modelId: "model-7",
+    datasetId: "ds-invalid",
+    datasetName: "incomplete_data.csv",
+    status: "failed",
+    startedAt: "2025-01-18T16:00:00Z",
+    validation: {
+      isValid: false,
+      datasetColumns: ["Feature 1", "Feature 2"],
+      expectedColumns: ["Feature 1", "Feature 2", "Feature 3", "Label"],
+      missingColumns: ["Feature 3", "Label"],
+      extraColumns: [],
+      message: "Dataset is missing 2 required column(s)",
+    },
+    triggeredBy: "Mike Johnson",
+  },
+];
+
+// Mock Training Pipelines
+export const mockPipelines: Record<string, TrainingPipeline> = {
+  "model-7": {
+    modelId: "model-7",
+    trainingScriptPath: "models/example/train.py",
+    runs: mockTrainingRuns,
+  },
+  "model-1": {
+    modelId: "model-1",
+    trainingScriptPath: "models/churn/train.py",
+    runs: [],
+  },
+};

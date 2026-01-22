@@ -20,12 +20,14 @@ import {
   Typography,
 } from "@mui/material";
 import { Add, ArrowBack, OpenInNew } from "@mui/icons-material";
-import { Model, Dataset, ModelVersion } from "../../types";
+import { Model, Dataset, ModelVersion, TrainingPipeline as TrainingPipelineType, TrainingRun } from "../../types";
 import { fetchFileContent, getGitHubFileUrl } from "../../services/github";
 import { compareVersions } from "../../utils/version";
 import Markdown from "react-markdown";
 import DatasetPreview from "../DatasetPreview/DatasetPreview";
 import AddDatasetDialog from "../AddDatasetDialog/AddDatasetDialog";
+import TrainingPipeline from "../TrainingPipeline/TrainingPipeline";
+import { mockPipelines } from "../../data/mockData";
 
 interface ModelDetailProps {
   model: Model;
@@ -33,7 +35,7 @@ interface ModelDetailProps {
   onModelUpdate?: (model: Model) => void;
 }
 
-type TabId = "overview" | "model_file" | "training" | "features" | "inference" | "datasets";
+type TabId = "overview" | "model_file" | "training" | "features" | "inference" | "datasets" | "pipeline";
 
 const statusColors: Record<Model["status"], "warning" | "info" | "success" | "default"> = {
   development: "warning",
@@ -60,6 +62,9 @@ export default function ModelDetail({ model, isConnected, onModelUpdate }: Model
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedVersion, setSelectedVersion] = useState<string>(model.version);
   const [addDatasetOpen, setAddDatasetOpen] = useState(false);
+  const [pipeline, setPipeline] = useState<TrainingPipelineType>(() =>
+    mockPipelines[model.id] || { modelId: model.id, runs: [] }
+  );
 
   const sortedVersions = [...(model.versions || [])].sort((a, b) =>
     compareVersions(a.version, b.version)
@@ -93,39 +98,57 @@ export default function ModelDetail({ model, isConnected, onModelUpdate }: Model
   };
 
   useEffect(() => {
-    if (model.files?.modelCard) {
+    if (model.mockContent?.modelCard && !isConnected) {
+      setModelCardContent(model.mockContent.modelCard);
+    } else if (model.files?.modelCard) {
       loadFile(model.files.modelCard, setModelCardContent, "modelCard");
     }
-  }, [model.files?.modelCard, isConnected]);
+  }, [model.files?.modelCard, model.mockContent?.modelCard, isConnected]);
 
   useEffect(() => {
-    if (activeTab === "training" && model.files?.trainingScript && trainingScript === null && !errors.training) {
-      loadFile(model.files.trainingScript, setTrainingScript, "training");
+    if (activeTab === "training" && trainingScript === null && !errors.training) {
+      if (model.mockContent?.trainingScript && !isConnected) {
+        setTrainingScript(model.mockContent.trainingScript);
+      } else if (model.files?.trainingScript) {
+        loadFile(model.files.trainingScript, setTrainingScript, "training");
+      }
     }
-  }, [activeTab, model.files?.trainingScript]);
+  }, [activeTab, model.files?.trainingScript, model.mockContent?.trainingScript, isConnected]);
 
   useEffect(() => {
-    if (activeTab === "features" && model.files?.featureScript && featureScript === null && !errors.features) {
-      loadFile(model.files.featureScript, setFeatureScript, "features");
+    if (activeTab === "features" && featureScript === null && !errors.features) {
+      if (model.mockContent?.featureScript && !isConnected) {
+        setFeatureScript(model.mockContent.featureScript);
+      } else if (model.files?.featureScript) {
+        loadFile(model.files.featureScript, setFeatureScript, "features");
+      }
     }
-  }, [activeTab, model.files?.featureScript]);
+  }, [activeTab, model.files?.featureScript, model.mockContent?.featureScript, isConnected]);
 
   useEffect(() => {
-    if (activeTab === "inference" && model.files?.inferenceScript && inferenceScript === null && !errors.inference) {
-      loadFile(model.files.inferenceScript, setInferenceScript, "inference");
+    if (activeTab === "inference" && inferenceScript === null && !errors.inference) {
+      if (model.mockContent?.inferenceScript && !isConnected) {
+        setInferenceScript(model.mockContent.inferenceScript);
+      } else if (model.files?.inferenceScript) {
+        loadFile(model.files.inferenceScript, setInferenceScript, "inference");
+      }
     }
-  }, [activeTab, model.files?.inferenceScript]);
+  }, [activeTab, model.files?.inferenceScript, model.mockContent?.inferenceScript, isConnected]);
 
-  const tabs: { id: TabId; label: string; filePath?: string }[] = [
+  const tabs: { id: TabId; label: string; filePath?: string; hasMock?: boolean }[] = [
     { id: "overview", label: "Model Card" },
     { id: "datasets", label: "Datasets" },
-    { id: "training", label: "Training Script", filePath: model.files?.trainingScript },
-    { id: "features", label: "Feature Extraction", filePath: model.files?.featureScript },
-    { id: "inference", label: "Inference Script", filePath: model.files?.inferenceScript },
+    { id: "pipeline", label: "Training Pipeline" },
+    { id: "training", label: "Training Script", filePath: model.files?.trainingScript, hasMock: !!model.mockContent?.trainingScript },
+    { id: "features", label: "Feature Extraction", filePath: model.files?.featureScript, hasMock: !!model.mockContent?.featureScript },
+    { id: "inference", label: "Inference Script", filePath: model.files?.inferenceScript, hasMock: !!model.mockContent?.inferenceScript },
   ];
 
   const renderMDFile = () => {
-    if (!(model.files?.modelCard && isConnected)) {
+    const hasMockContent = !!model.mockContent?.modelCard;
+    const hasGitHubContent = !!(model.files?.modelCard && isConnected);
+
+    if (!hasMockContent && !hasGitHubContent) {
       return (
         <Paper sx={{ p: 4, textAlign: "center" }}>
           <Typography variant="h6" sx={{ mb: 1 }}>
@@ -175,30 +198,35 @@ export default function ModelDetail({ model, isConnected, onModelUpdate }: Model
       );
     }
 
+    const filePath = model.files?.modelCard;
+    const githubUrl = filePath ? getGitHubFileUrl(filePath) : null;
+
     return (
       <Paper variant="outlined">
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: "divider" }}
-        >
-          <Typography variant="body2" sx={{ fontFamily: "monospace", color: "text.secondary" }}>
-            {model.files.modelCard}
-          </Typography>
-          {getGitHubFileUrl(model.files.modelCard) && (
-            <Button
-              href={getGitHubFileUrl(model.files.modelCard)!}
-              target="_blank"
-              rel="noopener noreferrer"
-              size="small"
-              variant="outlined"
-              endIcon={<OpenInNew />}
-            >
-              View on GitHub
-            </Button>
-          )}
-        </Stack>
+        {filePath && (
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: "divider" }}
+          >
+            <Typography variant="body2" sx={{ fontFamily: "monospace", color: "text.secondary" }}>
+              {filePath}
+            </Typography>
+            {githubUrl && (
+              <Button
+                href={githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                size="small"
+                variant="outlined"
+                endIcon={<OpenInNew />}
+              >
+                View on GitHub
+              </Button>
+            )}
+          </Stack>
+        )}
         <Box sx={{ p: 3 }} className="markdown-raw">
           <Markdown>{modelCardContent}</Markdown>
         </Box>
@@ -212,7 +240,10 @@ export default function ModelDetail({ model, isConnected, onModelUpdate }: Model
     loadingKey: string,
     errorKey: string
   ) => {
-    if (!isConnected) {
+    // Allow rendering if we have content (from mock or GitHub)
+    const hasContent = content !== null;
+
+    if (!isConnected && !hasContent) {
       return (
         <Paper sx={{ p: 4, textAlign: "center" }}>
           <Typography color="text.secondary">Connect to GitHub to view this file.</Typography>
@@ -220,7 +251,7 @@ export default function ModelDetail({ model, isConnected, onModelUpdate }: Model
       );
     }
 
-    if (!filePath) {
+    if (!filePath && !hasContent) {
       return (
         <Paper sx={{ p: 4, textAlign: "center" }}>
           <Typography color="text.secondary">No file path configured for this script.</Typography>
@@ -260,19 +291,20 @@ export default function ModelDetail({ model, isConnected, onModelUpdate }: Model
       );
     }
 
-    const githubUrl = getGitHubFileUrl(filePath);
+    const githubUrl = filePath ? getGitHubFileUrl(filePath) : null;
 
     return (
       <Paper variant="outlined" sx={{ overflow: "hidden" }}>
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: "divider" }}
-        >
-          <Typography variant="body2" sx={{ fontFamily: "monospace", color: "text.secondary" }}>
-            {filePath}
-          </Typography>
+        {filePath && (
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: "divider" }}
+          >
+            <Typography variant="body2" sx={{ fontFamily: "monospace", color: "text.secondary" }}>
+              {filePath}
+            </Typography>
           {githubUrl && (
             <Button
               href={githubUrl}
@@ -285,7 +317,8 @@ export default function ModelDetail({ model, isConnected, onModelUpdate }: Model
               View on GitHub
             </Button>
           )}
-        </Stack>
+          </Stack>
+        )}
         <Highlight theme={themes.vsDark} code={content || ""} language="python">
           {({ style, tokens, getLineProps, getTokenProps }) => (
             <pre className="code-block" style={{ ...style, margin: 0, padding: "16px", overflow: "auto" }}>
@@ -367,6 +400,77 @@ export default function ModelDetail({ model, isConnected, onModelUpdate }: Model
     onModelUpdate(updatedModel);
     setSelectedVersion(newVersionStr);
     setAddDatasetOpen(false);
+  };
+
+  const handleRunTraining = (datasetId: string) => {
+    const dataset = currentVersionData?.datasets.find((d) => d.id === datasetId);
+    if (!dataset) return;
+
+    // Create a new training run (mock - would actually trigger backend)
+    const newRun: TrainingRun = {
+      id: `run-${Date.now()}`,
+      modelId: model.id,
+      datasetId,
+      datasetName: dataset.name,
+      status: "running",
+      startedAt: new Date().toISOString(),
+      validation: {
+        isValid: true,
+        datasetColumns: dataset.columns || [],
+        expectedColumns: ["Feature 1", "Feature 2", "Feature 3", "Label"],
+        missingColumns: [],
+        extraColumns: [],
+        message: "Validation passed",
+      },
+      triggeredBy: "Sarah Chen",
+    };
+
+    setPipeline((prev) => ({
+      ...prev,
+      runs: [newRun, ...prev.runs],
+    }));
+
+    // Simulate training completion after 3 seconds
+    setTimeout(() => {
+      setPipeline((prev) => ({
+        ...prev,
+        runs: prev.runs.map((run) =>
+          run.id === newRun.id
+            ? {
+                ...run,
+                status: "completed" as const,
+                completedAt: new Date().toISOString(),
+                metrics: {
+                  accuracy: 0.85 + Math.random() * 0.1,
+                  precision: 0.83 + Math.random() * 0.1,
+                  recall: 0.86 + Math.random() * 0.1,
+                  f1Score: 0.84 + Math.random() * 0.1,
+                  trainingTime: Math.floor(120 + Math.random() * 60),
+                  epochs: 100,
+                },
+                outputModelPath: `models/example/outputs/model_${newRun.id}.pkl`,
+                logs: [
+                  `[${new Date().toISOString()}] Starting training run...`,
+                  `[${new Date().toISOString()}] Loading dataset: ${dataset.name}`,
+                  `[${new Date().toISOString()}] Training complete.`,
+                ],
+              }
+            : run
+        ),
+      }));
+    }, 3000);
+  };
+
+  const renderPipelineTab = () => {
+    const datasets = currentVersionData?.datasets || [];
+    return (
+      <TrainingPipeline
+        model={model}
+        pipeline={pipeline}
+        datasets={datasets}
+        onRunTraining={handleRunTraining}
+      />
+    );
   };
 
   const renderDatasetsTab = () => {
@@ -526,7 +630,7 @@ export default function ModelDetail({ model, isConnected, onModelUpdate }: Model
                 key={tab.id}
                 value={tab.id}
                 label={tab.label}
-                disabled={tab.id !== "overview" && tab.id !== "datasets" && !tab.filePath && !isConnected}
+                disabled={tab.id !== "overview" && tab.id !== "datasets" && tab.id !== "pipeline" && !tab.filePath && !tab.hasMock && !isConnected}
               />
             ))}
           </Tabs>
@@ -543,6 +647,7 @@ export default function ModelDetail({ model, isConnected, onModelUpdate }: Model
 
           {activeTab === "datasets" && renderDatasetsTab()}
 
+          {activeTab === "pipeline" && renderPipelineTab()}
 
           {activeTab === "training" && (
             <Box>

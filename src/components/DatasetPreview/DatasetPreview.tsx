@@ -7,8 +7,15 @@ import {
   Chip,
   IconButton,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Tooltip,
   Typography,
+  Paper,
 } from "@mui/material";
 import { ContentCopy, ExpandMore, Storage, TableChart, Check } from "@mui/icons-material";
 import { Dataset } from "../../types";
@@ -72,6 +79,73 @@ export default function DatasetPreview({ dataset }: DatasetPreviewProps) {
       </AccordionSummary>
       <AccordionDetails>
         <Stack spacing={2}>
+          {dataset.previewData && (
+            <Box>
+              <TableContainer
+                component={Paper}
+                variant="outlined"
+                sx={{
+                  maxHeight: 300,
+                  position: "relative",
+                  "&::after": dataset.rowCount && dataset.rowCount > dataset.previewData.rows.length
+                    ? {
+                        content: '""',
+                        position: "absolute",
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 40,
+                        background: "linear-gradient(transparent, rgba(255,255,255,0.95))",
+                        pointerEvents: "none",
+                      }
+                    : undefined,
+                }}
+              >
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      {dataset.previewData.headers.map((header, index) => (
+                        <TableCell
+                          key={index}
+                          sx={{
+                            fontWeight: 600,
+                            bgcolor: "grey.100",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {header}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {dataset.previewData.rows.map((row, rowIndex) => (
+                      <TableRow
+                        key={rowIndex}
+                        sx={{ bgcolor: rowIndex % 2 === 1 ? "grey.50" : "transparent" }}
+                      >
+                        {row.map((cell, cellIndex) => (
+                          <TableCell key={cellIndex} sx={{ whiteSpace: "nowrap" }}>
+                            {cell}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              {dataset.rowCount && dataset.rowCount > dataset.previewData.rows.length && (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mt: 1, display: "block", fontStyle: "italic" }}
+                >
+                  Showing {dataset.previewData.rows.length} of {dataset.rowCount.toLocaleString()} rows
+                </Typography>
+              )}
+            </Box>
+          )}
+
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Box
               sx={{
@@ -100,7 +174,7 @@ export default function DatasetPreview({ dataset }: DatasetPreviewProps) {
             </Box>
           </Stack>
 
-          {dataset.columns && (
+          {dataset.columns && !dataset.previewData && (
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Columns:
