@@ -1,3 +1,4 @@
+import { Avatar, Box, Typography } from "@mui/material";
 import { User } from "../../types";
 
 interface UserInfoProps {
@@ -12,12 +13,32 @@ export default function UserInfo({ user }: UserInfoProps) {
     .toUpperCase();
 
   return (
-    <div className="user-info">
-      <div className="user-avatar">{initials}</div>
-      <div className="user-details">
-        <span className="user-name">{user.name}</span>
-        <span className="user-role">{user.role}</span>
-      </div>
-    </div>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+      <Avatar
+        sx={{
+          width: 48,
+          height: 48,
+          bgcolor: "primary.main",
+          fontSize: "1rem",
+          fontWeight: 500,
+        }}
+      >
+        {initials}
+      </Avatar>
+      <Box sx={{ display: "flex", flexDirection: "column", textAlign: "left" }}>
+        <Typography
+          variant="body2"
+          sx={{ fontWeight: 500, color: "white", fontSize: "1.5rem" }}
+        >
+          {user.name}
+        </Typography>
+        <Typography
+          variant="caption"
+          sx={{ color: "text.secondary", fontSize: "1rem" }}
+        >
+          {user.role}
+        </Typography>
+      </Box>
+    </Box>
   );
 }

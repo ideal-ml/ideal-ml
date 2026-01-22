@@ -1,5 +1,19 @@
 import { useState, useEffect, FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Divider,
+  Link,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { ArrowBack, OpenInNew } from "@mui/icons-material";
 import { GitHubSettings, ConnectionStatus } from "../../types";
 import {
   getSettings,
@@ -14,6 +28,13 @@ interface SettingsProps {
   connectionStatus: ConnectionStatus;
   connectionError: string | null;
 }
+
+const statusConfig: Record<ConnectionStatus, { label: string; color: "success" | "warning" | "default" | "error" }> = {
+  connected: { label: "Connected", color: "success" },
+  connecting: { label: "Connecting...", color: "warning" },
+  disconnected: { label: "Not connected", color: "default" },
+  error: { label: "Error", color: "error" },
+};
 
 export default function Settings({
   onSave,
@@ -126,185 +147,217 @@ export default function Settings({
   const canTest = repoOwner.trim() && repoName.trim() && token.trim();
 
   return (
-    <div className="settings-page">
-      <div className="settings-header">
-        <Link to="/models" className="btn btn-secondary back-btn">
-          ← Back to Models
-        </Link>
-        <h1 className="page-title">Settings</h1>
-      </div>
+    <Box>
+      {/* Header */}
+      <Stack
+        direction="row"
+        alignItems="center"
+        sx={{ mb: 4 }}
+      >
+        <Button
+          component={RouterLink}
+          to="/models"
+          startIcon={<ArrowBack />}
+          variant="outlined"
+          sx={{ mr: 2 }}
+        >
+          Back to Models
+        </Button>
+        <Typography variant="h4" sx={{ fontWeight: 700, flex: 1, textAlign: "center", mr: 15 }}>
+          Settings
+        </Typography>
+      </Stack>
 
-      <div className="settings-content">
-        <div className="settings-card">
-          <div className="settings-card-header">
-            <h2>GitHub Connection</h2>
-            <div className="connection-status-badge">
-              <span className={`status-dot status-${connectionStatus}`} />
-              <span className="status-text">
-                {connectionStatus === "connected" && "Connected"}
-                {connectionStatus === "connecting" && "Connecting..."}
-                {connectionStatus === "disconnected" && "Not connected"}
-                {connectionStatus === "error" && "Error"}
-              </span>
-            </div>
-          </div>
+      {/* Settings Card */}
+      <Box sx={{ maxWidth: 800, mx: "auto" }}>
+        <Card>
+          <CardContent sx={{ p: 4 }}>
+            {/* Card Header */}
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+              <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                GitHub Connection
+              </Typography>
+              <Chip
+                label={statusConfig[connectionStatus].label}
+                color={statusConfig[connectionStatus].color}
+                size="small"
+              />
+            </Stack>
 
-          {connectionError && (
-            <div className="error-banner">
-              <strong>Connection Error:</strong> {connectionError}
-            </div>
-          )}
+            {/* Connection Error */}
+            {connectionError && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                <strong>Connection Error:</strong> {connectionError}
+              </Alert>
+            )}
 
-          <form onSubmit={handleSubmit} className="settings-form-page">
-            <div className="form-section">
-              <h3>Repository</h3>
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="repoOwner">Owner *</label>
-                  <input
-                    id="repoOwner"
-                    type="text"
-                    value={repoOwner}
-                    onChange={(e) => setRepoOwner(e.target.value)}
-                    required
-                    placeholder="e.g., my-org"
-                  />
-                </div>
+            <form onSubmit={handleSubmit}>
+              <Stack spacing={4}>
+                {/* Repository Section */}
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: "text.secondary", mb: 2 }}>
+                    Repository
+                  </Typography>
+                  <Stack spacing={2}>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                      <TextField
+                        label="Owner"
+                        value={repoOwner}
+                        onChange={(e) => setRepoOwner(e.target.value)}
+                        required
+                        placeholder="e.g., my-org"
+                        fullWidth
+                        size="small"
+                      />
+                      <TextField
+                        label="Repository"
+                        value={repoName}
+                        onChange={(e) => setRepoName(e.target.value)}
+                        required
+                        placeholder="e.g., ml-models"
+                        fullWidth
+                        size="small"
+                      />
+                    </Stack>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                      <TextField
+                        label="Branch"
+                        value={branch}
+                        onChange={(e) => setBranch(e.target.value)}
+                        placeholder="main"
+                        fullWidth
+                        size="small"
+                      />
+                      <TextField
+                        label="Config File Path"
+                        value={configPath}
+                        onChange={(e) => setConfigPath(e.target.value)}
+                        placeholder="models.yaml"
+                        fullWidth
+                        size="small"
+                      />
+                    </Stack>
+                    {repoOwner.trim() && repoName.trim() && (
+                      <Button
+                        href={`https://github.com/${repoOwner.trim()}/${repoName.trim()}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        variant="outlined"
+                        endIcon={<OpenInNew />}
+                        sx={{ alignSelf: "flex-start" }}
+                      >
+                        View on GitHub
+                      </Button>
+                    )}
+                  </Stack>
+                </Box>
 
-                <div className="form-group">
-                  <label htmlFor="repoName">Repository *</label>
-                  <input
-                    id="repoName"
-                    type="text"
-                    value={repoName}
-                    onChange={(e) => setRepoName(e.target.value)}
-                    required
-                    placeholder="e.g., ml-models"
-                  />
-                </div>
-              </div>
+                <Divider />
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="branch">Branch</label>
-                  <input
-                    id="branch"
-                    type="text"
-                    value={branch}
-                    onChange={(e) => setBranch(e.target.value)}
-                    placeholder="main"
-                  />
-                </div>
+                {/* Authentication Section */}
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: "text.secondary", mb: 2 }}>
+                    Authentication
+                  </Typography>
+                  <Stack spacing={1}>
+                    <TextField
+                      label="Personal Access Token"
+                      type="password"
+                      value={token}
+                      onChange={(e) => setToken(e.target.value)}
+                      required
+                      placeholder="ghp_xxxxxxxxxxxx"
+                      fullWidth
+                      size="small"
+                    />
+                    {token.length >= 8 && (
+                      <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                        Token ending in: <code>...{token.slice(-8)}</code>
+                      </Typography>
+                    )}
+                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                      Create a token with <code>repo</code> scope at{" "}
+                      <Link
+                        href="https://github.com/settings/tokens"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        GitHub Settings
+                      </Link>
+                    </Typography>
+                  </Stack>
+                </Box>
 
-                <div className="form-group">
-                  <label htmlFor="configPath">Config File Path</label>
-                  <input
-                    id="configPath"
-                    type="text"
-                    value={configPath}
-                    onChange={(e) => setConfigPath(e.target.value)}
-                    placeholder="models.yaml"
-                  />
-                </div>
-              </div>
+                <Divider />
 
-              {repoOwner.trim() && repoName.trim() && (
-                <a
-                  href={`https://github.com/${repoOwner.trim()}/${repoName.trim()}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-secondary github-link-btn"
+                {/* Test Connection Section */}
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: "text.secondary", mb: 2 }}>
+                    Test Connection
+                  </Typography>
+                  <Stack spacing={2}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleTestConnection}
+                      disabled={!canTest || testStatus === "testing"}
+                      sx={{ alignSelf: "flex-start" }}
+                    >
+                      {testStatus === "testing" ? "Testing..." : "Test Connection"}
+                    </Button>
+
+                    {testStatus === "success" && (
+                      <Alert severity="success">{testDetails}</Alert>
+                    )}
+
+                    {testStatus === "error" && (
+                      <Alert severity="error">
+                        <strong>Failed:</strong> {testError}
+                        {testDetails && (
+                          <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                            {testDetails}
+                          </Typography>
+                        )}
+                      </Alert>
+                    )}
+                  </Stack>
+                </Box>
+
+                <Divider />
+
+                {/* Form Actions */}
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  justifyContent="space-between"
+                  alignItems={{ xs: "stretch", sm: "center" }}
+                  spacing={2}
                 >
-                  View on GitHub →
-                </a>
-              )}
-            </div>
-
-            <div className="form-section">
-              <h3>Authentication</h3>
-              <div className="form-group">
-                <label htmlFor="token">Personal Access Token *</label>
-                <input
-                  id="token"
-                  type="password"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  required
-                  placeholder="ghp_xxxxxxxxxxxx"
-                />
-                {token.length >= 8 && (
-                  <span className="token-preview">
-                    Token ending in: <code>...{token.slice(-8)}</code>
-                  </span>
-                )}
-                <span className="form-hint">
-                  Create a token with <code>repo</code> scope at{" "}
-                  <a
-                    href="https://github.com/settings/tokens"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    GitHub Settings
-                  </a>
-                </span>
-              </div>
-            </div>
-
-            <div className="form-section">
-              <h3>Test Connection</h3>
-              <div className="test-connection-area">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={handleTestConnection}
-                  disabled={!canTest || testStatus === "testing"}
-                >
-                  {testStatus === "testing" ? "Testing..." : "Test Connection"}
-                </button>
-
-                {testStatus === "success" && (
-                  <div className="test-result test-success">
-                    {testDetails}
-                  </div>
-                )}
-
-                {testStatus === "error" && (
-                  <div className="test-result test-error">
-                    <strong>Failed:</strong> {testError}
-                    {testDetails && <div className="test-details">{testDetails}</div>}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="form-actions-page">
-              {hasSettings && (
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  onClick={handleDisconnect}
-                >
-                  Disconnect
-                </button>
-              )}
-              <div className="form-actions-right">
-                {hasSettings && connectionStatus === "error" && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={handleRetry}
-                  >
-                    Retry Connection
-                  </button>
-                )}
-                <button type="submit" className="btn btn-primary">
-                  {hasSettings ? "Save & Reconnect" : "Connect"}
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+                  {hasSettings ? (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={handleDisconnect}
+                    >
+                      Disconnect
+                    </Button>
+                  ) : (
+                    <Box />
+                  )}
+                  <Stack direction="row" spacing={1.5} justifyContent="flex-end">
+                    {hasSettings && connectionStatus === "error" && (
+                      <Button variant="outlined" onClick={handleRetry}>
+                        Retry Connection
+                      </Button>
+                    )}
+                    <Button type="submit" variant="contained">
+                      {hasSettings ? "Save & Reconnect" : "Connect"}
+                    </Button>
+                  </Stack>
+                </Stack>
+              </Stack>
+            </form>
+          </CardContent>
+        </Card>
+      </Box>
+    </Box>
   );
 }

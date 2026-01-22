@@ -23,6 +23,49 @@ export const initialModels: Model[] = [
       accuracy: 0.92,
       latency: 45,
     },
+    versions: [
+      {
+        version: "2.1.0",
+        datasets: [
+          {
+            id: "ds-1",
+            name: "training_data.csv",
+            filePath: "s3://ml-datasets-prod/churn/v2.1.0/training_data.csv",
+            description: "Customer usage patterns and churn labels",
+            rowCount: 50000,
+            columns: ["customer_id", "usage_days", "feature_usage", "support_tickets", "churned"],
+            addedAt: "2024-12-01T14:22:00Z",
+          },
+          {
+            id: "ds-2",
+            name: "validation_data.csv",
+            filePath: "s3://ml-datasets-prod/churn/v2.1.0/validation_data.csv",
+            description: "Holdout validation set",
+            rowCount: 10000,
+            columns: ["customer_id", "usage_days", "feature_usage", "support_tickets", "churned"],
+            addedAt: "2024-12-01T14:22:00Z",
+          },
+        ],
+        createdAt: "2024-12-01T14:22:00Z",
+        notes: "Added validation dataset for improved evaluation",
+      },
+      {
+        version: "2.0.0",
+        datasets: [
+          {
+            id: "ds-1",
+            name: "training_data.csv",
+            filePath: "s3://ml-datasets-prod/churn/v2.0.0/training_data.csv",
+            description: "Customer usage patterns and churn labels",
+            rowCount: 50000,
+            columns: ["customer_id", "usage_days", "feature_usage", "support_tickets", "churned"],
+            addedAt: "2024-11-15T10:00:00Z",
+          },
+        ],
+        createdAt: "2024-11-15T10:00:00Z",
+        notes: "Initial production release",
+      },
+    ],
   },
   {
     id: "model-2",
@@ -38,6 +81,49 @@ export const initialModels: Model[] = [
       accuracy: 0.97,
       latency: 23,
     },
+    versions: [
+      {
+        version: "3.0.1",
+        datasets: [
+          {
+            id: "ds-3",
+            name: "transactions_2024.csv",
+            filePath: "s3://ml-datasets-prod/fraud/v3.0.1/transactions_2024.csv",
+            description: "Transaction records with fraud labels",
+            rowCount: 1000000,
+            columns: ["tx_id", "amount", "merchant", "location", "time", "is_fraud"],
+            addedAt: "2024-11-28T16:45:00Z",
+          },
+          {
+            id: "ds-4",
+            name: "synthetic_fraud.csv",
+            filePath: "s3://ml-datasets-prod/fraud/v3.0.1/synthetic_fraud.csv",
+            description: "Synthetic fraud cases for training balance",
+            rowCount: 50000,
+            columns: ["tx_id", "amount", "merchant", "location", "time", "is_fraud"],
+            addedAt: "2024-11-28T16:45:00Z",
+          },
+        ],
+        createdAt: "2024-11-28T16:45:00Z",
+        notes: "Added synthetic data to improve fraud detection recall",
+      },
+      {
+        version: "3.0.0",
+        datasets: [
+          {
+            id: "ds-3",
+            name: "transactions_2024.csv",
+            filePath: "s3://ml-datasets-prod/fraud/v3.0.0/transactions_2024.csv",
+            description: "Transaction records with fraud labels",
+            rowCount: 1000000,
+            columns: ["tx_id", "amount", "merchant", "location", "time", "is_fraud"],
+            addedAt: "2024-10-01T09:00:00Z",
+          },
+        ],
+        createdAt: "2024-10-01T09:00:00Z",
+        notes: "Major version upgrade with new model architecture",
+      },
+    ],
   },
   {
     id: "model-3",
@@ -53,6 +139,33 @@ export const initialModels: Model[] = [
       accuracy: 0.85,
       latency: 67,
     },
+    versions: [
+      {
+        version: "1.5.0",
+        datasets: [
+          {
+            id: "ds-5",
+            name: "user_interactions.csv",
+            filePath: "s3://ml-datasets-prod/recommender/v1.5.0/user_interactions.csv",
+            description: "User-product interaction history",
+            rowCount: 500000,
+            columns: ["user_id", "product_id", "action", "timestamp", "rating"],
+            addedAt: "2024-12-10T08:30:00Z",
+          },
+          {
+            id: "ds-6",
+            name: "product_catalog.csv",
+            filePath: "s3://ml-datasets-prod/recommender/v1.5.0/product_catalog.csv",
+            description: "Product metadata and categories",
+            rowCount: 25000,
+            columns: ["product_id", "name", "category", "price", "description"],
+            addedAt: "2024-12-10T08:30:00Z",
+          },
+        ],
+        createdAt: "2024-12-10T08:30:00Z",
+        notes: "Added product catalog for content-based filtering",
+      },
+    ],
   },
   {
     id: "model-4",
@@ -68,6 +181,24 @@ export const initialModels: Model[] = [
       accuracy: 0.78,
       latency: 120,
     },
+    versions: [
+      {
+        version: "0.9.0",
+        datasets: [
+          {
+            id: "ds-7",
+            name: "feedback_labeled.csv",
+            filePath: "s3://ml-datasets-prod/sentiment/v0.9.0/feedback_labeled.csv",
+            description: "Manually labeled customer feedback",
+            rowCount: 15000,
+            columns: ["feedback_id", "text", "channel", "sentiment", "confidence"],
+            addedAt: "2024-12-12T10:00:00Z",
+          },
+        ],
+        createdAt: "2024-12-12T10:00:00Z",
+        notes: "Initial development version",
+      },
+    ],
   },
   {
     id: "model-5",
@@ -83,6 +214,33 @@ export const initialModels: Model[] = [
       accuracy: 0.88,
       latency: 35,
     },
+    versions: [
+      {
+        version: "1.2.3",
+        datasets: [
+          {
+            id: "ds-8",
+            name: "sales_history.csv",
+            filePath: "s3://ml-datasets-prod/demand/v1.2.3/sales_history.csv",
+            description: "Historical sales data by product and region",
+            rowCount: 200000,
+            columns: ["date", "product_id", "region", "units_sold", "revenue"],
+            addedAt: "2024-11-30T12:15:00Z",
+          },
+          {
+            id: "ds-9",
+            name: "seasonal_factors.csv",
+            filePath: "s3://ml-datasets-prod/demand/v1.2.3/seasonal_factors.csv",
+            description: "Seasonal adjustment factors",
+            rowCount: 365,
+            columns: ["day_of_year", "season", "holiday_flag", "adjustment_factor"],
+            addedAt: "2024-11-30T12:15:00Z",
+          },
+        ],
+        createdAt: "2024-11-30T12:15:00Z",
+        notes: "Added seasonal factors for improved accuracy",
+      },
+    ],
   },
   {
     id: "model-6",
@@ -98,5 +256,23 @@ export const initialModels: Model[] = [
       accuracy: 0.72,
       latency: 200,
     },
+    versions: [
+      {
+        version: "1.0.0",
+        datasets: [
+          {
+            id: "ds-10",
+            name: "image_labels.csv",
+            filePath: "s3://ml-datasets-prod/images/v1.0.0/image_labels.csv",
+            description: "Image file paths and classification labels",
+            rowCount: 100000,
+            columns: ["image_path", "label", "confidence", "annotator"],
+            addedAt: "2023-03-20T10:00:00Z",
+          },
+        ],
+        createdAt: "2023-03-20T10:00:00Z",
+        notes: "Initial release",
+      },
+    ],
   },
 ];

@@ -1,3 +1,20 @@
+export interface Dataset {
+  id: string;
+  name: string;
+  filePath: string;
+  description?: string;
+  rowCount?: number;
+  columns?: string[];
+  addedAt: string;
+}
+
+export interface ModelVersion {
+  version: string;
+  datasets: Dataset[];
+  createdAt: string;
+  notes?: string;
+}
+
 export interface Model {
   id: string;
   name: string;
@@ -19,6 +36,7 @@ export interface Model {
     inferenceScript?: string;
     modelFile?: string;
   };
+  versions?: ModelVersion[];
 }
 
 export interface User {

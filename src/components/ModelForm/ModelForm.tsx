@@ -1,4 +1,22 @@
 import { useState, useEffect, FormEvent } from "react";
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  FormControl,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { Close } from "@mui/icons-material";
 import { Model, ModelStatus } from "../../types";
 
 interface ModelFormProps {
@@ -78,142 +96,145 @@ export default function ModelForm({ model, onSave, onCancel }: ModelFormProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{model ? "Edit Model" : "Add New Model"}</h2>
-          <button className="modal-close" onClick={onCancel}>
-            &times;
-          </button>
-        </div>
+    <Dialog open onClose={onCancel} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Typography variant="h6" component="span" sx={{ fontWeight: 600 }}>
+          {model ? "Edit Model" : "Add New Model"}
+        </Typography>
+        <IconButton onClick={onCancel} size="small" aria-label="close">
+          <Close />
+        </IconButton>
+      </DialogTitle>
 
-        <form onSubmit={handleSubmit} className="model-form">
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="name">Model Name *</label>
-              <input
-                id="name"
-                type="text"
+      <form onSubmit={handleSubmit}>
+        <DialogContent dividers>
+          <Stack spacing={3}>
+            {/* Name and Version row */}
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                label="Model Name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
                 placeholder="e.g., Customer Churn Predictor"
+                fullWidth
+                size="small"
               />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="version">Version *</label>
-              <input
-                id="version"
-                type="text"
+              <TextField
+                label="Version"
                 value={version}
                 onChange={(e) => setVersion(e.target.value)}
                 required
                 placeholder="e.g., 1.0.0"
+                fullWidth
+                size="small"
               />
-            </div>
-          </div>
+            </Stack>
 
-          <div className="form-group">
-            <label htmlFor="description">Description *</label>
-            <textarea
-              id="description"
+            {/* Description */}
+            <TextField
+              label="Description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
-              rows={3}
               placeholder="Describe what this model does..."
+              multiline
+              rows={3}
+              fullWidth
+              size="small"
             />
-          </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="framework">Framework *</label>
-              <select
-                id="framework"
-                value={framework}
-                onChange={(e) => setFramework(e.target.value)}
-                required
-              >
-                {frameworks.map((fw) => (
-                  <option key={fw} value={fw}>
-                    {fw}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Framework and Status row */}
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <FormControl fullWidth size="small" required>
+                <InputLabel>Framework</InputLabel>
+                <Select
+                  value={framework}
+                  label="Framework"
+                  onChange={(e) => setFramework(e.target.value)}
+                >
+                  {frameworks.map((fw) => (
+                    <MenuItem key={fw} value={fw}>
+                      {fw}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth size="small" required>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={status}
+                  label="Status"
+                  onChange={(e) => setStatus(e.target.value as ModelStatus)}
+                >
+                  {statuses.map((s) => (
+                    <MenuItem key={s.value} value={s.value}>
+                      {s.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
 
-            <div className="form-group">
-              <label htmlFor="status">Status *</label>
-              <select
-                id="status"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as ModelStatus)}
-                required
-              >
-                {statuses.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="owner">Owner *</label>
-            <input
-              id="owner"
-              type="text"
+            {/* Owner */}
+            <TextField
+              label="Owner"
               value={owner}
               onChange={(e) => setOwner(e.target.value)}
               required
               placeholder="e.g., Sarah Chen"
+              fullWidth
+              size="small"
             />
-          </div>
 
-          <div className="form-section">
-            <h3>Metrics (Optional)</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="accuracy">Accuracy (%)</label>
-                <input
-                  id="accuracy"
+            {/* Metrics Section */}
+            <Box>
+              <Divider sx={{ mb: 2 }} />
+              <Typography
+                variant="subtitle2"
+                sx={{ color: "text.secondary", mb: 2 }}
+              >
+                Metrics (Optional)
+              </Typography>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField
+                  label="Accuracy (%)"
                   type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
                   value={accuracy}
                   onChange={(e) => setAccuracy(e.target.value)}
                   placeholder="e.g., 92.5"
+                  fullWidth
+                  size="small"
+                  slotProps={{
+                    htmlInput: { min: 0, max: 100, step: 0.1 },
+                  }}
                 />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="latency">Latency (ms)</label>
-                <input
-                  id="latency"
+                <TextField
+                  label="Latency (ms)"
                   type="number"
-                  min="0"
-                  step="1"
                   value={latency}
                   onChange={(e) => setLatency(e.target.value)}
                   placeholder="e.g., 45"
+                  fullWidth
+                  size="small"
+                  slotProps={{
+                    htmlInput: { min: 0, step: 1 },
+                  }}
                 />
-              </div>
-            </div>
-          </div>
+              </Stack>
+            </Box>
+          </Stack>
+        </DialogContent>
 
-          <div className="form-actions">
-            <button type="button" className="btn btn-secondary" onClick={onCancel}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary">
-              {model ? "Save Changes" : "Create Model"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button variant="outlined" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="contained">
+            {model ? "Save Changes" : "Create Model"}
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
   );
 }

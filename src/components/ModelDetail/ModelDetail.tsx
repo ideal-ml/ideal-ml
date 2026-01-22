@@ -1,22 +1,45 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import { Highlight, themes } from "prism-react-renderer";
-import { Model } from "../../types";
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  Tab,
+  Tabs,
+  Typography,
+} from "@mui/material";
+import { Add, ArrowBack, OpenInNew } from "@mui/icons-material";
+import { Model, Dataset, ModelVersion } from "../../types";
 import { fetchFileContent, getGitHubFileUrl } from "../../services/github";
-import Markdown from 'react-markdown'
+import { compareVersions } from "../../utils/version";
+import Markdown from "react-markdown";
+import DatasetPreview from "../DatasetPreview/DatasetPreview";
+import AddDatasetDialog from "../AddDatasetDialog/AddDatasetDialog";
 
 interface ModelDetailProps {
   model: Model;
   isConnected: boolean;
+  onModelUpdate?: (model: Model) => void;
 }
 
-type Tab = "overview" | "model_file" | "training" | "features" | "inference";
+type TabId = "overview" | "model_file" | "training" | "features" | "inference" | "datasets";
 
-const statusColors: Record<Model["status"], string> = {
-  development: "status-development",
-  staging: "status-staging",
-  production: "status-production",
-  archived: "status-archived",
+const statusColors: Record<Model["status"], "warning" | "info" | "success" | "default"> = {
+  development: "warning",
+  staging: "info",
+  production: "success",
+  archived: "default",
 };
 
 function formatDate(dateString: string): string {
@@ -27,14 +50,21 @@ function formatDate(dateString: string): string {
   });
 }
 
-export default function ModelDetail({ model, isConnected }: ModelDetailProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+export default function ModelDetail({ model, isConnected, onModelUpdate }: ModelDetailProps) {
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [modelCardContent, setModelCardContent] = useState<string | null>(null);
   const [trainingScript, setTrainingScript] = useState<string | null>(null);
   const [featureScript, setFeatureScript] = useState<string | null>(null);
   const [inferenceScript, setInferenceScript] = useState<string | null>(null);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [selectedVersion, setSelectedVersion] = useState<string>(model.version);
+  const [addDatasetOpen, setAddDatasetOpen] = useState(false);
+
+  const sortedVersions = [...(model.versions || [])].sort((a, b) =>
+    compareVersions(a.version, b.version)
+  );
+  const currentVersionData = sortedVersions.find((v) => v.version === selectedVersion);
 
   const loadFile = async (
     filePath: string | undefined,
@@ -86,8 +116,9 @@ export default function ModelDetail({ model, isConnected }: ModelDetailProps) {
     }
   }, [activeTab, model.files?.inferenceScript]);
 
-  const tabs: { id: Tab; label: string; filePath?: string }[] = [
+  const tabs: { id: TabId; label: string; filePath?: string }[] = [
     { id: "overview", label: "Model Card" },
+    { id: "datasets", label: "Datasets" },
     { id: "training", label: "Training Script", filePath: model.files?.trainingScript },
     { id: "features", label: "Feature Extraction", filePath: model.files?.featureScript },
     { id: "inference", label: "Inference Script", filePath: model.files?.inferenceScript },
@@ -96,66 +127,84 @@ export default function ModelDetail({ model, isConnected }: ModelDetailProps) {
   const renderMDFile = () => {
     if (!(model.files?.modelCard && isConnected)) {
       return (
-        <div className="overview-fallback">
-          <h3>No model card</h3>
-          <p>Please add a ModelCard.md in your model directory.</p>
-          <br />
-          <a
-          href={`https://github.com/spencerwjensen96/example-ml-models`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn-secondary github-link-btn"
-        >
-          View on GitHub →
-        </a>
-      </div>
-      )
+        <Paper sx={{ p: 4, textAlign: "center" }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            No model card
+          </Typography>
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
+            Please add a ModelCard.md in your model directory.
+          </Typography>
+          <Button
+            href="https://github.com/spencerwjensen96/example-ml-models"
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="outlined"
+            endIcon={<OpenInNew />}
+          >
+            View on GitHub
+          </Button>
+        </Paper>
+      );
     }
+
     if (loading.modelCard) {
       return (
-        <div className="file-loading">
-          <div className="loading-spinner" />
-          <p>Loading model card...</p>
-        </div>
-      )
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 6 }}>
+          <CircularProgress size={32} sx={{ mb: 2 }} />
+          <Typography color="text.secondary">Loading model card...</Typography>
+        </Box>
+      );
     }
+
     if (errors.modelCard) {
       return (
-        <div className="file-error">
-          <p>Error loading model card: {errors.modelCard}</p>
-          <button
-            className="btn btn-secondary"
-            onClick={() =>
-              loadFile(model.files?.modelCard, setModelCardContent, "modelCard")
-            }
-          >
-            Retry
-          </button>
-        </div>
-      )
+        <Alert
+          severity="error"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => loadFile(model.files?.modelCard, setModelCardContent, "modelCard")}
+            >
+              Retry
+            </Button>
+          }
+        >
+          Error loading model card: {errors.modelCard}
+        </Alert>
+      );
     }
 
     return (
-        <div className="markdown-content">
-          <div className="code-header">
-            <span className="code-filename">{model.files.modelCard}</span>
-            {getGitHubFileUrl(model.files.modelCard) && (
-              <a
-                href={getGitHubFileUrl(model.files.modelCard)!}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-secondary btn-sm"
-              >
-                View on GitHub →
-              </a>
-            )}
-          </div>
-          <div className="markdown-raw">
-            <Markdown >{modelCardContent}</Markdown>
-          </div>
-        </div>
-    )
-  }
+      <Paper variant="outlined">
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: "divider" }}
+        >
+          <Typography variant="body2" sx={{ fontFamily: "monospace", color: "text.secondary" }}>
+            {model.files.modelCard}
+          </Typography>
+          {getGitHubFileUrl(model.files.modelCard) && (
+            <Button
+              href={getGitHubFileUrl(model.files.modelCard)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              size="small"
+              variant="outlined"
+              endIcon={<OpenInNew />}
+            >
+              View on GitHub
+            </Button>
+          )}
+        </Stack>
+        <Box sx={{ p: 3 }} className="markdown-raw">
+          <Markdown>{modelCardContent}</Markdown>
+        </Box>
+      </Paper>
+    );
+  };
 
   const renderCodeBlock = (
     content: string | null,
@@ -165,67 +214,81 @@ export default function ModelDetail({ model, isConnected }: ModelDetailProps) {
   ) => {
     if (!isConnected) {
       return (
-        <div className="file-placeholder">
-          <p>Connect to GitHub to view this file.</p>
-        </div>
+        <Paper sx={{ p: 4, textAlign: "center" }}>
+          <Typography color="text.secondary">Connect to GitHub to view this file.</Typography>
+        </Paper>
       );
     }
 
     if (!filePath) {
       return (
-        <div className="file-placeholder">
-          <p>No file path configured for this script.</p>
-        </div>
+        <Paper sx={{ p: 4, textAlign: "center" }}>
+          <Typography color="text.secondary">No file path configured for this script.</Typography>
+        </Paper>
       );
     }
 
     if (loading[loadingKey]) {
       return (
-        <div className="file-loading">
-          <div className="loading-spinner" />
-          <p>Loading file...</p>
-        </div>
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 6 }}>
+          <CircularProgress size={32} sx={{ mb: 2 }} />
+          <Typography color="text.secondary">Loading file...</Typography>
+        </Box>
       );
     }
 
     if (errors[errorKey]) {
       return (
-        <div className="file-error">
-          <p>Error: {errors[errorKey]}</p>
-          <button
-            className="btn btn-secondary"
-            onClick={() => {
-              if (loadingKey === "training") loadFile(filePath, setTrainingScript, "training");
-              if (loadingKey === "features") loadFile(filePath, setFeatureScript, "features");
-              if (loadingKey === "inference") loadFile(filePath, setInferenceScript, "inference");
-            }}
-          >
-            Retry
-          </button>
-        </div>
+        <Alert
+          severity="error"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => {
+                if (loadingKey === "training") loadFile(filePath, setTrainingScript, "training");
+                if (loadingKey === "features") loadFile(filePath, setFeatureScript, "features");
+                if (loadingKey === "inference") loadFile(filePath, setInferenceScript, "inference");
+              }}
+            >
+              Retry
+            </Button>
+          }
+        >
+          Error: {errors[errorKey]}
+        </Alert>
       );
     }
 
     const githubUrl = getGitHubFileUrl(filePath);
 
     return (
-      <div className="code-container">
-        <div className="code-header">
-          <span className="code-filename">{filePath}</span>
+      <Paper variant="outlined" sx={{ overflow: "hidden" }}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: "divider" }}
+        >
+          <Typography variant="body2" sx={{ fontFamily: "monospace", color: "text.secondary" }}>
+            {filePath}
+          </Typography>
           {githubUrl && (
-            <a
+            <Button
               href={githubUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-secondary btn-sm"
+              size="small"
+              variant="outlined"
+              endIcon={<OpenInNew />}
             >
-              View on GitHub →
-            </a>
+              View on GitHub
+            </Button>
           )}
-        </div>
+        </Stack>
         <Highlight theme={themes.vsDark} code={content || ""} language="python">
           {({ style, tokens, getLineProps, getTokenProps }) => (
-            <pre className="code-block" style={style}>
+            <pre className="code-block" style={{ ...style, margin: 0, padding: "16px", overflow: "auto" }}>
               {tokens.map((line, i) => (
                 <div key={i} {...getLineProps({ line })}>
                   <span className="line-number">{i + 1}</span>
@@ -237,7 +300,7 @@ export default function ModelDetail({ model, isConnected }: ModelDetailProps) {
             </pre>
           )}
         </Highlight>
-      </div>
+      </Paper>
     );
   };
 
@@ -245,130 +308,267 @@ export default function ModelDetail({ model, isConnected }: ModelDetailProps) {
     const githubUrl = getGitHubFileUrl(filePath);
 
     return (
-      <div className="code-container" style={{ marginTop: '24px' }}>
-        <div className="code-header">
-          <span className="code-filename">{model.files?.modelFile}</span>
+      <Paper variant="outlined" sx={{ mt: 3 }}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ px: 2, py: 1.5 }}
+        >
+          <Typography variant="body2" sx={{ fontFamily: "monospace", color: "text.secondary" }}>
+            {model.files?.modelFile}
+          </Typography>
           {githubUrl && (
-            <div>
-              <a
-                href={githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-secondary btn-sm"
-              >
-                View on GitHub →
-              </a>
-            </div>
+            <Button
+              href={githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              size="small"
+              variant="outlined"
+              endIcon={<OpenInNew />}
+            >
+              View on GitHub
+            </Button>
           )}
-        </div>
-      </div>
-    )
-  }
+        </Stack>
+      </Paper>
+    );
+  };
+
+  const handleAddDataset = (dataset: Omit<Dataset, "id" | "addedAt">) => {
+    if (!onModelUpdate) return;
+
+    const newDataset: Dataset = {
+      ...dataset,
+      id: `ds-${Date.now()}`,
+      addedAt: new Date().toISOString(),
+    };
+
+    const newVersion = model.version.split(".").map(Number);
+    newVersion[1] = (newVersion[1] || 0) + 1;
+    newVersion[2] = 0;
+    const newVersionStr = newVersion.join(".");
+
+    const existingDatasets = currentVersionData?.datasets || [];
+    const newVersionData: ModelVersion = {
+      version: newVersionStr,
+      datasets: [...existingDatasets, newDataset],
+      createdAt: new Date().toISOString(),
+      notes: `Added dataset: ${newDataset.name}`,
+    };
+
+    const updatedModel: Model = {
+      ...model,
+      version: newVersionStr,
+      updatedAt: new Date().toISOString(),
+      versions: [newVersionData, ...(model.versions || [])],
+    };
+
+    onModelUpdate(updatedModel);
+    setSelectedVersion(newVersionStr);
+    setAddDatasetOpen(false);
+  };
+
+  const renderDatasetsTab = () => {
+    const datasets = currentVersionData?.datasets || [];
+
+    return (
+      <Stack spacing={3}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>Version</InputLabel>
+            <Select
+              value={selectedVersion}
+              label="Version"
+              onChange={(e) => setSelectedVersion(e.target.value)}
+            >
+              {sortedVersions.map((v) => (
+                <MenuItem key={v.version} value={v.version}>
+                  v{v.version} ({formatDate(v.createdAt)})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => setAddDatasetOpen(true)}
+          >
+            Add Dataset
+          </Button>
+        </Stack>
+
+        {currentVersionData?.notes && (
+          <Alert severity="info" icon={false}>
+            <Typography variant="body2">
+              <strong>Version notes:</strong> {currentVersionData.notes}
+            </Typography>
+          </Alert>
+        )}
+
+        {datasets.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: "center" }}>
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              No datasets
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              This version has no associated datasets.
+            </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<Add />}
+              onClick={() => setAddDatasetOpen(true)}
+            >
+              Add Dataset
+            </Button>
+          </Paper>
+        ) : (
+          <Stack spacing={1}>
+            {datasets.map((dataset) => (
+              <DatasetPreview key={dataset.id} dataset={dataset} isConnected={isConnected} />
+            ))}
+          </Stack>
+        )}
+      </Stack>
+    );
+  };
 
   return (
-    <div className="model-detail-page">
-      <div className="model-detail-header">
-        <Link to="/models" className="btn btn-secondary back-btn">
-          ← Back to Models
-        </Link>
-        <h1 className="page-title">{model.name}</h1>
-        <div />
-      </div>
+    <Box>
+      {/* Header */}
+      <Stack direction="row" alignItems="center" sx={{ mb: 4 }}>
+        <Button
+          component={RouterLink}
+          to="/models"
+          startIcon={<ArrowBack />}
+          variant="outlined"
+          sx={{ mr: 2 }}
+        >
+          Back to Models
+        </Button>
+        <Typography variant="h4" sx={{ fontWeight: 700, flex: 1, textAlign: "center", mr: 15 }}>
+          {model.name}
+        </Typography>
+      </Stack>
 
-      <div className="model-detail-content">
-        <div className="model-detail-hero">
-          <div className="model-detail-title-row">
-            <span className={`status-badge ${statusColors[model.status]}`}>
-              {model.status}
-            </span>
-          </div>
-          <div className="model-detail-meta">
-            <span className="meta-item">
-              <strong>Version:</strong> {model.version}
-            </span>
-            <span className="meta-item">
-              <strong>Framework:</strong> {model.framework}
-            </span>
-            <span className="meta-item">
-              <strong>Owner:</strong> {model.owner}
-            </span>
-            <span className="meta-item">
-              <strong>Updated:</strong> {formatDate(model.updatedAt)}
-            </span>
-          </div>
-          <p className="model-detail-description">{model.description}</p>
+      <Box sx={{ maxWidth: 1000, mx: "auto" }}>
+        {/* Hero Card */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent sx={{ p: 4 }}>
+            <Chip
+              label={model.status}
+              color={statusColors[model.status]}
+              size="small"
+              sx={{ textTransform: "capitalize", mb: 2 }}
+            />
 
-          {model.metrics && (
-            <div className="model-detail-metrics">
-              <Link
+            <Stack direction="row" flexWrap="wrap" gap={3} sx={{ mb: 2 }}>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Version
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {model.version}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Framework
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {model.framework}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Owner
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {model.owner}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Updated
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {formatDate(model.updatedAt)}
+                </Typography>
+              </Box>
+            </Stack>
+
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              {model.description}
+            </Typography>
+
+            {model.metrics && (
+              <Button
+                component={RouterLink}
                 to={`/models/${model.id}/metrics`}
-                className="btn btn-primary view-metrics-btn"
+                variant="contained"
               >
                 View Metrics
-              </Link>
-            </div>
-          )}
-        </div>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
 
-        <div className="model-detail-tabs">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={`tab-btn ${activeTab === tab.id ? "active" : ""} ${
-                tab.id !== "overview" && !tab.filePath ? "disabled" : ""
-              }`}
-              onClick={() => setActiveTab(tab.id)}
-              disabled={tab.id !== "overview" && !tab.filePath && !isConnected}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {/* Tabs */}
+        <Paper sx={{ mb: 3 }}>
+          <Tabs
+            value={activeTab}
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            variant="scrollable"
+            scrollButtons="auto"
+          >
+            {tabs.map((tab) => (
+              <Tab
+                key={tab.id}
+                value={tab.id}
+                label={tab.label}
+                disabled={tab.id !== "overview" && tab.id !== "datasets" && !tab.filePath && !isConnected}
+              />
+            ))}
+          </Tabs>
+        </Paper>
 
-        <div className="model-detail-tab-content">
+        {/* Tab Content */}
+        <Box>
           {activeTab === "overview" && (
-            <div className="tab-panel">
+            <Box>
               {renderMDFile()}
-              {renderModelFileContents(
-                model.files!.modelFile!
-              )}
-            </div>
+              {model.files?.modelFile && renderModelFileContents(model.files.modelFile)}
+            </Box>
           )}
+
+          {activeTab === "datasets" && renderDatasetsTab()}
+
 
           {activeTab === "training" && (
-            <div className="tab-panel">
-              {renderCodeBlock(
-                trainingScript,
-                model.files?.trainingScript,
-                "training",
-                "training"
-              )}
-            </div>
+            <Box>
+              {renderCodeBlock(trainingScript, model.files?.trainingScript, "training", "training")}
+            </Box>
           )}
 
           {activeTab === "features" && (
-            <div className="tab-panel">
-              {renderCodeBlock(
-                featureScript,
-                model.files?.featureScript,
-                "features",
-                "features"
-              )}
-            </div>
+            <Box>
+              {renderCodeBlock(featureScript, model.files?.featureScript, "features", "features")}
+            </Box>
           )}
 
           {activeTab === "inference" && (
-            <div className="tab-panel">
-              {renderCodeBlock(
-                inferenceScript,
-                model.files?.inferenceScript,
-                "inference",
-                "inference"
-              )}
-            </div>
+            <Box>
+              {renderCodeBlock(inferenceScript, model.files?.inferenceScript, "inference", "inference")}
+            </Box>
           )}
-        </div>
-      </div>
-    </div>
+        </Box>
+      </Box>
+
+      <AddDatasetDialog
+        open={addDatasetOpen}
+        onClose={() => setAddDatasetOpen(false)}
+        onAdd={handleAddDataset}
+      />
+    </Box>
   );
 }

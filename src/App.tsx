@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { BrowserRouter, Routes, Route, useParams, Navigate } from "react-router-dom";
+import { Box, CircularProgress, Paper, Typography } from "@mui/material";
 import { Model, User, GitHubSettings, ConnectionStatus } from "./types";
 import { currentUser as defaultUser, initialModels } from "./data/mockData";
 import {
@@ -36,18 +37,23 @@ function saveUserToStorage(user: User): void {
 interface AppContextProps {
   models: Model[];
   connectionStatus: ConnectionStatus;
+  onModelUpdate?: (model: Model) => void;
 }
 
-function ModelDetailWrapper({ models, connectionStatus }: AppContextProps) {
+function ModelDetailWrapper({ models, connectionStatus, onModelUpdate }: AppContextProps) {
   const { id } = useParams<{ id: string }>();
   const model = models.find((m) => m.id === id);
 
   if (!model) {
     return (
-      <div className="error-state">
-        <h2>Model not found</h2>
-        <p>The model with ID "{id}" could not be found.</p>
-      </div>
+      <Paper sx={{ p: 4, textAlign: "center" }}>
+        <Typography variant="h5" sx={{ mb: 1 }}>
+          Model not found
+        </Typography>
+        <Typography color="text.secondary">
+          The model with ID "{id}" could not be found.
+        </Typography>
+      </Paper>
     );
   }
 
@@ -55,6 +61,7 @@ function ModelDetailWrapper({ models, connectionStatus }: AppContextProps) {
     <ModelDetail
       model={model}
       isConnected={connectionStatus === "connected"}
+      onModelUpdate={onModelUpdate}
     />
   );
 }
@@ -65,10 +72,14 @@ function ModelMetricsWrapper({ models }: { models: Model[] }) {
 
   if (!model) {
     return (
-      <div className="error-state">
-        <h2>Model not found</h2>
-        <p>The model with ID "{id}" could not be found.</p>
-      </div>
+      <Paper sx={{ p: 4, textAlign: "center" }}>
+        <Typography variant="h5" sx={{ mb: 1 }}>
+          Model not found
+        </Typography>
+        <Typography color="text.secondary">
+          The model with ID "{id}" could not be found.
+        </Typography>
+      </Paper>
     );
   }
 
@@ -180,13 +191,19 @@ function App() {
     setEditingModel(null);
   };
 
+  const handleModelUpdate = (updatedModel: Model) => {
+    setModels((prev) =>
+      prev.map((m) => (m.id === updatedModel.id ? updatedModel : m))
+    );
+  };
+
   const renderModelsContent = () => {
     if (isLoading) {
       return (
-        <div className="loading-state">
-          <div className="loading-spinner" />
-          <p>Loading models...</p>
-        </div>
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 8 }}>
+          <CircularProgress size={40} sx={{ mb: 2 }} />
+          <Typography color="text.secondary">Loading models...</Typography>
+        </Box>
       );
     }
 
@@ -219,6 +236,7 @@ function App() {
               <ModelDetailWrapper
                 models={models}
                 connectionStatus={connectionStatus}
+                onModelUpdate={handleModelUpdate}
               />
             }
           />

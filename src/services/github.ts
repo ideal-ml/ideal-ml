@@ -1,4 +1,5 @@
 import { Model, GitHubSettings, GitHubCache } from "../types";
+import YAML from 'yaml'
 
 const SETTINGS_KEY = "github_settings";
 const CACHE_KEY = "github_cache";
@@ -104,12 +105,11 @@ function parseConfigFile(content: string, path: string): Model[] {
   let data: unknown;
 
   if (isYaml) {
-    data = parseYaml(content);
+    data = YAML.parse(content);
   } else {
     data = JSON.parse(content);
   }
 
-  // Expect either { models: [...] } or just [...]
   const modelsArray = Array.isArray(data) ? data : (data as { models?: unknown[] }).models;
 
   if (!Array.isArray(modelsArray)) {
@@ -124,10 +124,11 @@ function normalizeModel(item: unknown, index: number): Model {
   const now = new Date().toISOString();
 
   const filesObj = obj.files as Record<string, unknown> | undefined;
+  const versionsObj = obj.versions as Record<string, unknown>  | undefined;
   return {
     id: String(obj.id || `model-${index}`),
     name: String(obj.name || "Unnamed Model"),
-    version: String(obj.version || "1.0.0"),
+    version: String(obj.version || "Unknown"),
     description: String(obj.description || ""),
     framework: String(obj.framework || "Unknown"),
     status: validateStatus(obj.status),
@@ -142,6 +143,29 @@ function normalizeModel(item: unknown, index: number): Model {
         ? (obj.metrics as Record<string, unknown>).latency as number
         : undefined,
     } : undefined,
+    versions: versionsObj ? Array.isArray(versionsObj) ? versionsObj.map((ver) => {
+      const verObj = ver as Record<string, unknown>;
+      const datasetsObj = verObj.datasets as Record<string, unknown>[] | undefined;
+      return {
+        version: String(verObj.version || "Unknown"),
+        createdAt: String(verObj.createdAt || verObj.created_at || "Unknown"),
+        notes: String(verObj.notes || ""),
+        datasets: datasetsObj ? datasetsObj.map((ds) => {
+          const dsObj = ds as Record<string, unknown>;
+          return {
+            id: String(dsObj.id || `dataset-${Math.random().toString(36).substr(2, 9)}`),
+            name: String(dsObj.name || "Unnamed Dataset"),
+            filePath: String(dsObj.filePath || dsObj.file_path || ""),
+            description: String(dsObj.description || ""),
+            rowCount: typeof dsObj.rowCount === "number" ? dsObj.rowCount as number : undefined,
+            columns: Array.isArray(dsObj.columns)
+              ? (dsObj.columns as unknown[]).map(String)
+              : undefined,
+            addedAt: String(dsObj.addedAt || dsObj.added_at || now),
+          };
+        }) : [],
+      };
+    }) : [] : undefined,
     files: filesObj ? {
       modelCard: typeof filesObj.modelCard === "string" ? filesObj.modelCard : undefined,
       trainingScript: typeof filesObj.trainingScript === "string" ? filesObj.trainingScript : undefined,
@@ -158,110 +182,6 @@ function validateStatus(status: unknown): Model["status"] {
     return status as Model["status"];
   }
   return "development";
-}
-
-// Simple YAML parser for basic structures
-function parseYaml(content: string): unknown {
-  const lines = content.split("\n");
-  const result: unknown[] = [];
-  let currentObject: Record<string, unknown> | null = null;
-  let currentNested: Record<string, unknown> | null = null;
-  let currentNestedKey: string | null = null;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    // Skip empty lines and comments
-    if (!trimmed || trimmed.startsWith("#")) continue;
-
-    // New array item
-    if (trimmed.startsWith("- ")) {
-      if (currentObject) {
-        if (currentNested && currentNestedKey && Object.keys(currentNested).length > 0) {
-          currentObject[currentNestedKey] = currentNested;
-        }
-        result.push(currentObject);
-      }
-      currentObject = {};
-      currentNested = null;
-      currentNestedKey = null;
-
-      // Parse inline key-value after -
-      const afterDash = trimmed.slice(2).trim();
-      if (afterDash) {
-        const [key, ...valueParts] = afterDash.split(":");
-        if (key && valueParts.length > 0) {
-          currentObject[key.trim()] = parseYamlValue(valueParts.join(":").trim());
-        }
-      }
-      continue;
-    }
-
-    // Nested property
-    if (currentObject && trimmed.includes(":")) {
-      const colonIndex = trimmed.indexOf(":");
-      const key = trimmed.slice(0, colonIndex).trim();
-      const value = trimmed.slice(colonIndex + 1).trim();
-
-      // Check if this is a nested object declaration (key with no value)
-      if ((key === "metrics" || key === "files") && !value) {
-        // Save previous nested object if any
-        if (currentNested && currentNestedKey && Object.keys(currentNested).length > 0) {
-          currentObject[currentNestedKey] = currentNested;
-        }
-        currentNestedKey = key;
-        currentNested = {};
-        continue;
-      }
-
-      // Check if this is a nested property (indented with spaces)
-      if (currentNested && currentNestedKey && (line.startsWith("      ") || line.startsWith("    "))) {
-        currentNested[key] = parseYamlValue(value);
-      } else {
-        // Save any pending nested object
-        if (currentNested && currentNestedKey && Object.keys(currentNested).length > 0) {
-          currentObject[currentNestedKey] = currentNested;
-          currentNested = null;
-          currentNestedKey = null;
-        }
-        currentObject[key] = parseYamlValue(value);
-      }
-    }
-  }
-
-  // Don't forget the last object
-  if (currentObject) {
-    if (currentNested && currentNestedKey && Object.keys(currentNested).length > 0) {
-      currentObject[currentNestedKey] = currentNested;
-    }
-    result.push(currentObject);
-  }
-
-  return result;
-}
-
-function parseYamlValue(value: string): unknown {
-  if (!value) return "";
-
-  // Remove quotes
-  if ((value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))) {
-    return value.slice(1, -1);
-  }
-
-  // Numbers
-  if (/^-?\d+(\.\d+)?$/.test(value)) {
-    return parseFloat(value);
-  }
-
-  // Booleans
-  if (value === "true") return true;
-  if (value === "false") return false;
-
-  // Null
-  if (value === "null" || value === "~") return null;
-
-  return value;
 }
 
 export function invalidateCache(): void {
@@ -297,7 +217,6 @@ export async function fetchFileContent(
 
   const data = await response.json();
 
-  // GitHub returns base64 encoded content
   return atob(data.content);
 }
 
@@ -311,6 +230,6 @@ export function getGitHubFileUrl(filePath: string): string | null {
 export function downloadGitHubFile(filePath: string): string | null {
   const settings = getSettings();
   if (!settings) return null;
-  
+
   return `https://raw.githubusercontent.com/${settings.repoOwner}/${settings.repoName}/refs/heads/${settings.branch}/${filePath}`;
 }

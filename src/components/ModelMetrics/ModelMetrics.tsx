@@ -1,15 +1,27 @@
-import { Link } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  LinearProgress,
+  Paper,
+  Stack,
+  Typography,
+} from "@mui/material";
+import { ArrowBack } from "@mui/icons-material";
 import { Model } from "../../types";
 
 interface ModelMetricsProps {
   model: Model;
 }
 
-const statusColors: Record<Model["status"], string> = {
-  development: "status-development",
-  staging: "status-staging",
-  production: "status-production",
-  archived: "status-archived",
+const statusColors: Record<Model["status"], "warning" | "info" | "success" | "default"> = {
+  development: "warning",
+  staging: "info",
+  production: "success",
+  archived: "default",
 };
 
 function formatDate(dateString: string): string {
@@ -24,116 +36,207 @@ export default function ModelMetrics({ model }: ModelMetricsProps) {
   const hasMetrics = model.metrics && (model.metrics.accuracy !== undefined || model.metrics.latency !== undefined);
 
   return (
-    <div className="model-metrics-page">
-      <div className="model-metrics-header">
-        <Link to={`/models/${model.id}`} className="btn btn-secondary back-btn">
-          ← Back
-        </Link>
-        <h1 className="page-title">Model Metrics</h1>
-        <div />
-      </div>
+    <Box>
+      {/* Header */}
+      <Stack direction="row" alignItems="center" sx={{ mb: 4 }}>
+        <Button
+          component={RouterLink}
+          to={`/models/${model.id}`}
+          startIcon={<ArrowBack />}
+          variant="outlined"
+          sx={{ mr: 2 }}
+        >
+          Back
+        </Button>
+        <Typography variant="h4" sx={{ fontWeight: 700, flex: 1, textAlign: "center", mr: 10 }}>
+          Model Metrics
+        </Typography>
+      </Stack>
 
-      <div className="model-metrics-content">
-        <div className="model-metrics-hero">
-          <div className="model-metrics-title-row">
-            <h2>{model.name}</h2>
-            <span className={`status-badge ${statusColors[model.status]}`}>
-              {model.status}
-            </span>
-          </div>
-          <div className="model-metrics-meta">
-            <span className="meta-item">
-              <strong>Version:</strong> {model.version}
-            </span>
-            <span className="meta-item">
-              <strong>Framework:</strong> {model.framework}
-            </span>
-            <span className="meta-item">
-              <strong>Owner:</strong> {model.owner}
-            </span>
-            <span className="meta-item">
-              <strong>Updated:</strong> {formatDate(model.updatedAt)}
-            </span>
-          </div>
-        </div>
+      <Box sx={{ maxWidth: 1000, mx: "auto" }}>
+        {/* Hero Card */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent sx={{ p: 4 }}>
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+              <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                {model.name}
+              </Typography>
+              <Chip
+                label={model.status}
+                color={statusColors[model.status]}
+                size="small"
+                sx={{ textTransform: "capitalize" }}
+              />
+            </Stack>
+            <Stack direction="row" flexWrap="wrap" gap={3}>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Version
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {model.version}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Framework
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {model.framework}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Owner
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {model.owner}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Updated
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {formatDate(model.updatedAt)}
+                </Typography>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
 
+        {/* Metrics Grid */}
         {hasMetrics ? (
-          <div className="metrics-grid">
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+              gap: 3,
+              mb: 3,
+            }}
+          >
             {model.metrics?.accuracy !== undefined && (
-              <div className="metrics-card-large">
-                <div className="metrics-card-header">
-                  <h3>Accuracy</h3>
-                </div>
-                <div className="metrics-card-body">
-                  <div className="metrics-value-large">
+              <Card>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+                    Accuracy
+                  </Typography>
+                  <Typography variant="h3" sx={{ fontWeight: 700, color: "primary.main", mb: 2 }}>
                     {(model.metrics.accuracy * 100).toFixed(1)}%
-                  </div>
-                  <div className="metrics-bar-container">
-                    <div
-                      className="metrics-bar"
-                      style={{ width: `${model.metrics.accuracy * 100}%` }}
-                    />
-                  </div>
-                  <p className="metrics-description">
+                  </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={model.metrics.accuracy * 100}
+                    sx={{
+                      height: 8,
+                      borderRadius: 4,
+                      mb: 2,
+                      backgroundColor: "grey.200",
+                      "& .MuiLinearProgress-bar": {
+                        borderRadius: 4,
+                      },
+                    }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
                     Model prediction accuracy on the validation dataset
-                  </p>
-                </div>
-              </div>
+                  </Typography>
+                </CardContent>
+              </Card>
             )}
 
             {model.metrics?.latency !== undefined && (
-              <div className="metrics-card-large">
-                <div className="metrics-card-header">
-                  <h3>Latency</h3>
-                </div>
-                <div className="metrics-card-body">
-                  <div className="metrics-value-large">
+              <Card>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+                    Latency
+                  </Typography>
+                  <Typography variant="h3" sx={{ fontWeight: 700, color: "warning.main", mb: 2 }}>
                     {model.metrics.latency}ms
-                  </div>
-                  <div className="metrics-bar-container">
-                    <div
-                      className="metrics-bar metrics-bar-latency"
-                      style={{ width: `${Math.min(model.metrics.latency / 100 * 100, 100)}%` }}
-                    />
-                  </div>
-                  <p className="metrics-description">
+                  </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={Math.min((model.metrics.latency / 100) * 100, 100)}
+                    color="warning"
+                    sx={{
+                      height: 8,
+                      borderRadius: 4,
+                      mb: 2,
+                      backgroundColor: "grey.200",
+                      "& .MuiLinearProgress-bar": {
+                        borderRadius: 4,
+                      },
+                    }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
                     Average inference time per prediction
-                  </p>
-                </div>
-              </div>
+                  </Typography>
+                </CardContent>
+              </Card>
             )}
-          </div>
+          </Box>
         ) : (
-          <div className="no-metrics-state">
-            <h3>No Metrics Available</h3>
-            <p>This model does not have any metrics recorded yet.</p>
-          </div>
+          <Paper sx={{ p: 4, textAlign: "center", mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              No Metrics Available
+            </Typography>
+            <Typography color="text.secondary">
+              This model does not have any metrics recorded yet.
+            </Typography>
+          </Paper>
         )}
 
-        <div className="metrics-summary-card">
-          <h3>Performance Summary</h3>
-          <div className="summary-grid">
-            <div className="summary-item">
-              <span className="summary-label">Status</span>
-              <span className={`status-badge ${statusColors[model.status]}`}>
-                {model.status}
-              </span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-label">Framework</span>
-              <span className="summary-value">{model.framework}</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-label">Last Updated</span>
-              <span className="summary-value">{formatDate(model.updatedAt)}</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-label">Created</span>
-              <span className="summary-value">{formatDate(model.createdAt)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        {/* Performance Summary */}
+        <Card>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+              Performance Summary
+            </Typography>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" },
+                gap: 3,
+              }}
+            >
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+                  Status
+                </Typography>
+                <Chip
+                  label={model.status}
+                  color={statusColors[model.status]}
+                  size="small"
+                  sx={{ textTransform: "capitalize" }}
+                />
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+                  Framework
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {model.framework}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+                  Last Updated
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {formatDate(model.updatedAt)}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+                  Created
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {formatDate(model.createdAt)}
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+    </Box>
   );
 }

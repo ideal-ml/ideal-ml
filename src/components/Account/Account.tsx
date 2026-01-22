@@ -1,5 +1,19 @@
 import { useState, useEffect, FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
+import {
+  Alert,
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Collapse,
+  Divider,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { ArrowBack } from "@mui/icons-material";
 import { User } from "../../types";
 
 interface AccountProps {
@@ -60,92 +74,125 @@ export default function Account({ user, onSave }: AccountProps) {
     .slice(0, 2);
 
   return (
-    <div className="account-page">
-      <div className="account-header">
-        <Link to="/models" className="btn btn-secondary back-btn">
-          ← Back to Models
-        </Link>
-        <h1 className="page-title">Account</h1>
-      </div>
+    <Box>
+      {/* Header */}
+      <Stack direction="row" alignItems="center" sx={{ mb: 4 }}>
+        <Button
+          component={RouterLink}
+          to="/models"
+          startIcon={<ArrowBack />}
+          variant="outlined"
+          sx={{ mr: 2 }}
+        >
+          Back to Models
+        </Button>
+        <Typography variant="h4" sx={{ fontWeight: 700, flex: 1, textAlign: "center", mr: 15 }}>
+          Account
+        </Typography>
+      </Stack>
 
-      <div className="account-content">
-        <div className="account-card">
-          <div className="account-card-header">
-            <div className="account-avatar-large">{initials}</div>
-            <div className="account-header-info">
-              <h2>{name || "Your Name"}</h2>
-              <p>{role === "Other" ? customRole : role || "Your Role"}</p>
-            </div>
-          </div>
+      {/* Account Card */}
+      <Box sx={{ maxWidth: 600, mx: "auto" }}>
+        <Card>
+          <CardContent sx={{ p: 4 }}>
+            {/* Profile Header */}
+            <Stack direction="row" alignItems="center" spacing={3} sx={{ mb: 4 }}>
+              <Avatar
+                sx={{
+                  width: 80,
+                  height: 80,
+                  bgcolor: "primary.main",
+                  fontSize: "1.75rem",
+                  fontWeight: 600,
+                }}
+              >
+                {initials}
+              </Avatar>
+              <Box>
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  {name || "Your Name"}
+                </Typography>
+                <Typography variant="body1" sx={{ color: "text.secondary" }}>
+                  {role === "Other" ? customRole : role || "Your Role"}
+                </Typography>
+              </Box>
+            </Stack>
 
-          <form onSubmit={handleSubmit} className="account-form">
-            <div className="form-section">
-              <h3>Profile Information</h3>
+            <Divider sx={{ mb: 3 }} />
 
-              <div className="form-group">
-                <label htmlFor="name">Full Name *</label>
-                <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  placeholder="Enter your full name"
-                />
-              </div>
+            <form onSubmit={handleSubmit}>
+              <Stack spacing={3}>
+                {/* Profile Information Section */}
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: "text.secondary", mb: 2 }}>
+                    Profile Information
+                  </Typography>
+                  <Stack spacing={2}>
+                    <TextField
+                      label="Full Name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      placeholder="Enter your full name"
+                      fullWidth
+                      size="small"
+                    />
+                    <TextField
+                      label="Email Address"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      placeholder="Enter your email"
+                      fullWidth
+                      size="small"
+                    />
+                    <TextField
+                      label="Role"
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                      required
+                      placeholder="Enter your role"
+                      fullWidth
+                      size="small"
+                    />
+                    {role === "Other" && (
+                      <TextField
+                        label="Custom Role"
+                        value={customRole}
+                        onChange={(e) => setCustomRole(e.target.value)}
+                        required
+                        placeholder="Enter your role"
+                        fullWidth
+                        size="small"
+                      />
+                    )}
+                  </Stack>
+                </Box>
 
-              <div className="form-group">
-                <label htmlFor="email">Email Address *</label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="Enter your email"
-                />
-              </div>
+                <Divider />
 
-              <div className="form-group">
-                <label htmlFor="role">Role *</label>
-                <input
-                  id="role"
-                  type="text"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  required
-                  placeholder="Enter your role"
-                />
-              </div>
-
-              {role === "Other" && (
-                <div className="form-group">
-                  <label htmlFor="customRole">Custom Role *</label>
-                  <input
-                    id="customRole"
-                    type="text"
-                    value={customRole}
-                    onChange={(e) => setCustomRole(e.target.value)}
-                    required
-                    placeholder="Enter your role"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="form-actions-page">
-              {isSaved && (
-                <span className="save-success">Changes saved successfully!</span>
-              )}
-              <div className="form-actions-right">
-                <button type="submit" className="btn btn-primary">
-                  Save Changes
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+                {/* Form Actions */}
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <Collapse in={isSaved} orientation="horizontal">
+                    <Alert severity="success" sx={{ py: 0 }}>
+                      Changes saved successfully!
+                    </Alert>
+                  </Collapse>
+                  <Box sx={{ flex: 1 }} />
+                  <Button type="submit" variant="contained">
+                    Save Changes
+                  </Button>
+                </Stack>
+              </Stack>
+            </form>
+          </CardContent>
+        </Card>
+      </Box>
+    </Box>
   );
 }

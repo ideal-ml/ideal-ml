@@ -1,4 +1,18 @@
 import { useState } from "react";
+import {
+  Box,
+  Button,
+  Chip,
+  FormControl,
+  MenuItem,
+  Paper,
+  Select,
+  SelectChangeEvent,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { Add, Refresh } from "@mui/icons-material";
 import { Model, ModelStatus } from "../../types";
 import ModelCard from "../ModelCard/ModelCard";
 
@@ -43,59 +57,90 @@ export default function ModelList({
     return matchesSearch && matchesStatus;
   });
 
+  const handleStatusChange = (event: SelectChangeEvent) => {
+    setStatusFilter(event.target.value as ModelStatus | "all");
+  };
+
   return (
-    <div className="model-list-container">
-      <div className="model-list-header">
-        <h2 className="page-title">Models</h2>
+    <Box sx={{ maxWidth: 1200 }}>
+      {/* Header */}
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        sx={{ mb: 3 }}
+      >
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          Models
+        </Typography>
         {!isReadOnly && (
-          <button className="btn btn-primary" onClick={onAddNew}>
-            + Add Model
-          </button>
+          <Button variant="contained" startIcon={<Add />} onClick={onAddNew}>
+            Add Model
+          </Button>
         )}
         {isReadOnly && (
-          <div className="header-actions">
-            <span className="readonly-badge">View Only (from GitHub)</span>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Chip
+              label="View Only (from GitHub)"
+              size="small"
+              sx={{ bgcolor: "grey.100", color: "text.secondary" }}
+            />
             {onRefresh && (
-              <button
-                className="btn btn-secondary refresh-btn-main"
+              <Button
+                variant="outlined"
+                startIcon={<Refresh />}
                 onClick={onRefresh}
                 title="Refresh from GitHub"
               >
-                ↻ Refresh
-              </button>
+                Refresh
+              </Button>
             )}
-          </div>
+          </Stack>
         )}
-      </div>
+      </Stack>
 
-      <div className="model-list-filters">
-        <input
-          type="text"
-          className="search-input"
+      {/* Filters */}
+      <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+        <TextField
           placeholder="Search models..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          size="small"
+          sx={{ flex: 1, maxWidth: 400 }}
         />
-        <select
-          className="status-filter"
-          value={statusFilter}
-          onChange={(e) =>
-            setStatusFilter(e.target.value as ModelStatus | "all")
-          }
-        >
-          {statusOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <Select value={statusFilter} onChange={handleStatusChange}>
+            {statusOptions.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Stack>
 
-      <div className="model-list">
+      {/* Model Grid */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
+          gap: 3,
+        }}
+      >
         {filteredModels.length === 0 ? (
-          <div className="empty-state">
-            <p>No models found matching your criteria.</p>
-          </div>
+          <Paper
+            sx={{
+              gridColumn: "1 / -1",
+              textAlign: "center",
+              py: 6,
+              px: 3,
+              bgcolor: "background.paper",
+            }}
+          >
+            <Typography color="text.secondary">
+              No models found matching your criteria.
+            </Typography>
+          </Paper>
         ) : (
           filteredModels.map((model) => (
             <ModelCard
@@ -107,7 +152,7 @@ export default function ModelList({
             />
           ))
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
