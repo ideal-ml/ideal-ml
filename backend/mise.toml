@@ -1,0 +1,10 @@
+[env]
+_.python.venv = { path = ".venv", create = true }
+
+[tasks.pip]
+description = "pip install the requirements"
+run = "pip install -r requirements.txt && pip freeze >> requirements.lock.txt"
+
+[tasks.serve]
+description = "serve the uvicorn app on port 8080"
+run = ".venv/bin/uvicorn app.main:app --reload --port 8080"

@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+httpx
+pydantic
+pyyaml
+python-dotenv
+pytest
+pytest-asyncio
+respx
