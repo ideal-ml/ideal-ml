@@ -1,9 +1,22 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Annotated, Optional
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+
+
+def _coerce_str(v: object) -> str:
+    """YAML safe_load converts timestamps and some values to datetime/date/float.
+    Go's yaml.Unmarshal keeps them as strings. This validator matches Go's behavior."""
+    if isinstance(v, str):
+        return v
+    if v is None:
+        return ""
+    return str(v)
+
+
+CoercedStr = Annotated[str, BeforeValidator(_coerce_str)]
 
 
 class ModelMetrics(BaseModel):
@@ -26,36 +39,36 @@ class ModelFiles(BaseModel):
 class Dataset(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    id: str = ""
-    name: str = ""
-    file_path: str = Field(default="", alias="filePath")
-    description: Optional[str] = None
+    id: CoercedStr = ""
+    name: CoercedStr = ""
+    file_path: CoercedStr = Field(default="", alias="filePath")
+    description: Optional[CoercedStr] = None
     row_count: Optional[int] = Field(default=None, alias="rowCount")
     columns: Optional[list[str]] = None
-    added_at: str = Field(default="", alias="addedAt")
+    added_at: CoercedStr = Field(default="", alias="addedAt")
 
 
 class ModelVersion(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    version: str = ""
+    version: CoercedStr = ""
     datasets: list[Dataset] = []
-    created_at: str = Field(default="", alias="createdAt")
-    notes: Optional[str] = None
+    created_at: CoercedStr = Field(default="", alias="createdAt")
+    notes: Optional[CoercedStr] = None
 
 
 class Model(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    id: str = ""
-    name: str = ""
-    version: str = ""
-    description: str = ""
-    framework: str = ""
-    status: str = ""
-    owner: str = ""
-    created_at: str = Field(default="", alias="createdAt")
-    updated_at: str = Field(default="", alias="updatedAt")
+    id: CoercedStr = ""
+    name: CoercedStr = ""
+    version: CoercedStr = ""
+    description: CoercedStr = ""
+    framework: CoercedStr = ""
+    status: CoercedStr = ""
+    owner: CoercedStr = ""
+    created_at: CoercedStr = Field(default="", alias="createdAt")
+    updated_at: CoercedStr = Field(default="", alias="updatedAt")
     metrics: Optional[ModelMetrics] = None
     files: Optional[ModelFiles] = None
     versions: Optional[list[ModelVersion]] = None
@@ -107,44 +120,38 @@ def parse_models(content: bytes, path: str) -> list[Model]:
 def _parse_json(content: bytes) -> list[Model]:
     import json
 
-    # Try as array first
     try:
         data = json.loads(content)
-        if isinstance(data, list):
-            models = [Model(**item) for item in data]
-            return _normalize_models(models)
-    except (json.JSONDecodeError, Exception):
-        pass
+    except json.JSONDecodeError:
+        raise ValueError("config file must contain an array of models")
 
-    # Try as {"models": [...]}
-    try:
-        data = json.loads(content)
-        if isinstance(data, dict) and "models" in data and isinstance(data["models"], list):
-            models = [Model(**item) for item in data["models"]]
-            return _normalize_models(models)
-    except (json.JSONDecodeError, Exception):
-        pass
+    items: list | None = None
+    if isinstance(data, list):
+        items = data
+    elif isinstance(data, dict) and "models" in data and isinstance(data["models"], list):
+        items = data["models"]
 
-    raise ValueError("config file must contain an array of models")
+    if items is None:
+        raise ValueError("config file must contain an array of models")
+
+    models = [Model(**item) for item in items]
+    return _normalize_models(models)
 
 
 def _parse_yaml(content: bytes) -> list[Model]:
-    # Try as array first
     try:
         data = yaml.safe_load(content)
-        if isinstance(data, list) and len(data) > 0:
-            models = [Model(**item) for item in data]
-            return _normalize_models(models)
-    except Exception:
-        pass
+    except yaml.YAMLError:
+        raise ValueError("config file must contain an array of models")
 
-    # Try as {"models": [...]}
-    try:
-        data = yaml.safe_load(content)
-        if isinstance(data, dict) and "models" in data and isinstance(data["models"], list):
-            models = [Model(**item) for item in data["models"]]
-            return _normalize_models(models)
-    except Exception:
-        pass
+    items: list | None = None
+    if isinstance(data, list) and len(data) > 0:
+        items = data
+    elif isinstance(data, dict) and "models" in data and isinstance(data["models"], list):
+        items = data["models"]
 
-    raise ValueError("config file must contain an array of models")
+    if items is None:
+        raise ValueError("config file must contain an array of models")
+
+    models = [Model(**item) for item in items]
+    return _normalize_models(models)
